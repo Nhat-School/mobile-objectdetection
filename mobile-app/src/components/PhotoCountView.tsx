@@ -12,6 +12,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { BoundingBoxOverlay } from './BoundingBoxOverlay';
 import { DetectedObject } from '../types/detection';
+import { getColorForTrackId } from '../constants/modelConfig';
 
 interface PhotoCountViewProps {
   onRunPhotoInference: (
@@ -160,17 +161,21 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
               No laptops detected in this image. Ensure the laptop is clearly visible.
             </Text>
           ) : (
-            detections.map((item, index) => (
-              <View key={item.id || index} style={styles.resultItem}>
-                <View style={styles.resultItemLeft}>
-                  <Text style={styles.itemIndex}>#{index + 1}</Text>
-                  <Text style={styles.itemName}>LAPTOP</Text>
+            detections.map((item, index) => {
+              const itemColor = getColorForTrackId(index + 1);
+              return (
+                <View key={item.id || index} style={styles.resultItem}>
+                  <View style={styles.resultItemLeft}>
+                    <View style={[styles.itemDot, { backgroundColor: itemColor }]} />
+                    <Text style={[styles.itemIndex, { color: itemColor }]}>#{index + 1}</Text>
+                    <Text style={styles.itemName}>LAPTOP {index + 1}</Text>
+                  </View>
+                  <Text style={[styles.itemConfidence, { color: itemColor }]}>
+                    {Math.round(item.confidence * 100)}% Confidence
+                  </Text>
                 </View>
-                <Text style={styles.itemConfidence}>
-                  {Math.round(item.confidence * 100)}% Confidence
-                </Text>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       )}
@@ -306,11 +311,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  itemDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
   itemIndex: {
     color: '#38BDF8',
     fontSize: 13,
     fontWeight: '700',
-    width: 28,
+    width: 32,
   },
   itemName: {
     color: '#F1F5F9',

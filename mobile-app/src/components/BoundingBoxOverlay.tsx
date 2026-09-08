@@ -2,6 +2,8 @@ import React from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { DetectedObject, TrackedObject } from '../types/detection';
 
+import { getColorForTrackId } from '../constants/modelConfig';
+
 interface BoundingBoxOverlayProps {
   /** Detections (can be TrackedObject with trackId or regular DetectedObject) */
   detections: (DetectedObject | TrackedObject)[];
@@ -17,7 +19,7 @@ export const BoundingBoxOverlay: React.FC<BoundingBoxOverlayProps> = ({
     <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
       {detections.map((item, index) => {
         const isTracked = 'trackId' in item;
-        const color = isTracked ? (item as TrackedObject).color : '#00F0FF';
+        const color = isTracked ? (item as TrackedObject).color : getColorForTrackId(index + 1);
         const label = isTracked
           ? `Laptop #${(item as TrackedObject).trackId}`
           : `Laptop ${index + 1}`;
