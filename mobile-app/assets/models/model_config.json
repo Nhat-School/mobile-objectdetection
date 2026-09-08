@@ -1,0 +1,10 @@
+{
+  "model_name": "laptop_yolo_high_accuracy",
+  "architecture": "yolo11s",
+  "input_size": [640, 640],
+  "input_channels": 3,
+  "classes": ["laptop"],
+  "confidence_threshold": 0.45,
+  "iou_threshold": 0.45,
+  "anti_overcount_enabled": true
+}
