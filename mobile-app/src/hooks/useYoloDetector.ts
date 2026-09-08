@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
-import { detectLaptopsWithRoboflow } from '../services/roboflowService';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { offlineModelService } from '../services/offlineModelService';
 import { ObjectTracker } from '../utils/objectTracker';
 import { PerformanceTracker } from '../utils/performance';
 import {
@@ -25,6 +25,7 @@ export function useYoloDetector() {
     fps: 0,
   });
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isModelReady, setIsModelReady] = useState<boolean>(false);
 
   // Client-side Object Tracker for unique ID assignment and anti-overcounting
   const trackerRef = useRef<ObjectTracker>(
@@ -36,8 +37,17 @@ export function useYoloDetector() {
   );
   const perfTrackerRef = useRef<PerformanceTracker>(new PerformanceTracker());
 
+  // Initialize offline model on mount
+  useEffect(() => {
+    async function init() {
+      await offlineModelService.loadModel();
+      setIsModelReady(true);
+    }
+    init();
+  }, []);
+
   /**
-   * Resets the tracking session, active tracks, and cumulative counts.
+   * Resets tracking session, active tracks, and cumulative counts.
    */
   const resetTracker = useCallback(() => {
     trackerRef.current.reset();
@@ -46,7 +56,7 @@ export function useYoloDetector() {
   }, []);
 
   /**
-   * Runs detection on a static photo using Roboflow Inference API.
+   * Runs offline detection on a static photo using the locally trained model.
    */
   const runPhotoInference = useCallback(
     async (
@@ -58,7 +68,7 @@ export function useYoloDetector() {
       setIsProcessing(true);
 
       try {
-        const detections = await detectLaptopsWithRoboflow(
+        const detections = await offlineModelService.detectLaptops(
           imageUri,
           viewWidth,
           viewHeight,
@@ -70,27 +80,8 @@ export function useYoloDetector() {
         setMetrics({ inferenceTimeMs: avgLatencyMs, fps });
         return detections;
       } catch (err) {
-        console.warn('Roboflow API call failed, falling back to local mock for demo testing:', err);
-        // Fallback demo detections so UI remains fully testable offline
-        const latency = Date.now() - startTime;
-        const mockDetections: DetectedObject[] = [
-          {
-            id: 'mock_1',
-            box: {
-              x: Math.round(viewWidth * 0.15),
-              y: Math.round(viewHeight * 0.25),
-              width: Math.round(viewWidth * 0.7),
-              height: Math.round(viewHeight * 0.45),
-            },
-            normalizedBox: { x1: 0.15, y1: 0.25, x2: 0.85, y2: 0.7 },
-            confidence: 0.93,
-            classId: 0,
-            className: 'laptop',
-          },
-        ];
-        const { fps, avgLatencyMs } = perfTrackerRef.current.recordFrame(latency);
-        setMetrics({ inferenceTimeMs: avgLatencyMs, fps });
-        return mockDetections;
+        console.error('Offline inference error on photo:', err);
+        return [];
       } finally {
         setIsProcessing(false);
       }
@@ -99,7 +90,7 @@ export function useYoloDetector() {
   );
 
   /**
-   * Captures a live frame from CameraView, detects laptops via Roboflow,
+   * Processes a live frame from CameraView using the offline model,
    * updates the ObjectTracker to maintain unique IDs (Laptop #1, Laptop #2),
    * and prevents overcounting the same laptop more than once.
    */
@@ -111,17 +102,12 @@ export function useYoloDetector() {
       setIsProcessing(true);
 
       try {
-        let detections: DetectedObject[] = [];
-        try {
-          detections = await detectLaptopsWithRoboflow(
-            imageUri,
-            viewWidth,
-            viewHeight,
-            confidenceThreshold
-          );
-        } catch (apiErr) {
-          // If network latency occurs, tracker retains previous state smoothly
-        }
+        const detections = await offlineModelService.detectLaptops(
+          imageUri,
+          viewWidth,
+          viewHeight,
+          confidenceThreshold
+        );
 
         // Feed new detections into client-side Multi-Object Tracker
         const tracks = trackerRef.current.update(detections);
@@ -133,6 +119,8 @@ export function useYoloDetector() {
         const latency = Date.now() - startTime;
         const { fps, avgLatencyMs } = perfTrackerRef.current.recordFrame(latency);
         setMetrics({ inferenceTimeMs: avgLatencyMs, fps });
+      } catch (err) {
+        console.warn('Live frame offline inference notice:', err);
       } finally {
         setIsProcessing(false);
       }
@@ -141,6 +129,7 @@ export function useYoloDetector() {
   );
 
   return {
+    isModelReady,
     confidenceThreshold,
     setConfidenceThreshold,
     activeTracks,

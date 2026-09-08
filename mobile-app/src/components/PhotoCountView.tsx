@@ -113,7 +113,7 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
             {isProcessing && (
               <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="large" color="#00F0FF" />
-                <Text style={styles.loadingText}>Analyzing photo with Roboflow API...</Text>
+                <Text style={styles.loadingText}>Analyzing photo with offline model...</Text>
               </View>
             )}
           </>
