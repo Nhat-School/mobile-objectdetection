@@ -1,6 +1,13 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { DetectionMode, TrackingStats, InferenceMetrics } from '../types/detection';
+﻿import React from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  DetectionMode,
+  TrackingStats,
+  InferenceMetrics,
+  GestureDetectionResult,
+  GestureClass,
+} from '../types/detection';
+import { GESTURE_EMOJIS } from '../constants/modelConfig';
 
 interface ControlHeaderProps {
   mode: DetectionMode;
@@ -11,6 +18,8 @@ interface ControlHeaderProps {
   confidenceThreshold: number;
   onConfidenceChange: (val: number) => void;
   metrics: InferenceMetrics;
+  gestureResult?: GestureDetectionResult;
+  onSimulateGesture?: (gesture: GestureClass) => void;
 }
 
 export const ControlHeader: React.FC<ControlHeaderProps> = ({
@@ -22,26 +31,26 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
   confidenceThreshold,
   onConfidenceChange,
   metrics,
+  gestureResult,
+  onSimulateGesture,
 }) => {
   return (
     <View style={styles.container}>
-      {/* App Bar Title & Mode Switcher */}
-      <View style={styles.topRow}>
+      {/* Top Banner */}
+      <View style={styles.bannerRow}>
         <View>
-          <Text style={styles.appTitle}>💻 LAPTOP DETECTOR</Text>
-          <Text style={styles.subtitle}>
-            {mode === 'live' ? 'Live Video Tracking' : 'Photo Counter'}
-          </Text>
+          <Text style={styles.title}>🚀 Option A: Universal Model</Text>
+          <Text style={styles.subtitle}>Simultaneous Laptop Tracking & 5 Gestures</Text>
         </View>
 
-        {/* Tab Switcher */}
+        {/* Tab Switcher: Live vs Photo */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tabButton, mode === 'live' && styles.tabButtonActive]}
             onPress={() => onModeChange('live')}
           >
             <Text style={[styles.tabText, mode === 'live' && styles.tabTextActive]}>
-              🎥 Live Video
+              🎥 Live
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -55,13 +64,13 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
         </View>
       </View>
 
-      {/* Dynamic Counter & Status HUD */}
+      {/* Dynamic Status HUD */}
       <View style={styles.hudCard}>
         {mode === 'live' ? (
           <View style={styles.statsRow}>
-            {/* Active in View */}
+            {/* Laptops In View */}
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>IN VIEW NOW</Text>
+              <Text style={styles.statLabel}>IN VIEW</Text>
               <Text style={[styles.statValue, { color: '#00F0FF' }]}>
                 {trackingStats.currentlyInView}
               </Text>
@@ -71,66 +80,69 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
 
             {/* Total Unique Laptops Counted */}
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>TOTAL UNIQUE LAPTOPS</Text>
+              <Text style={styles.statLabel}>UNIQUE LAPS</Text>
               <Text style={[styles.statValue, { color: '#39FF14' }]}>
                 {trackingStats.totalUniqueCounted}
               </Text>
-              <Text style={styles.antiOvercountHint}>Anti-Overcount Active</Text>
             </View>
 
-            {/* Reset Tracker Button */}
-            <TouchableOpacity style={styles.resetButton} onPress={onResetTracker}>
-              <Text style={styles.resetButtonText}>🔄 Reset</Text>
-            </TouchableOpacity>
+            <View style={styles.statDivider} />
+
+            {/* Current Detected Gesture */}
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>ACTIVE GESTURE</Text>
+              <Text style={[styles.statValue, { color: '#FF1493' }]}>
+                {gestureResult && gestureResult.gesture !== 'none'
+                  ? GESTURE_EMOJIS[gestureResult.gesture] || gestureResult.gesture
+                  : '—'}
+              </Text>
+            </View>
+
+            <View style={styles.statDivider} />
+
+            {/* Live Telemetry */}
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>FPS / MS</Text>
+              <Text style={styles.statSubValue}>
+                {metrics.fps > 0 ? `${metrics.fps} FPS` : 'Ready'}
+              </Text>
+              <Text style={styles.latencyText}>
+                {metrics.inferenceTimeMs > 0 ? `${metrics.inferenceTimeMs}ms` : '100% Offline'}
+              </Text>
+            </View>
           </View>
         ) : (
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>LAPTOPS DETECTED IN PHOTO</Text>
-              <Text style={[styles.statValue, { color: '#FFD700' }]}>
-                {photoCount}
+          <View style={styles.photoHudRow}>
+            <View>
+              <Text style={styles.photoCountTitle}>Total Laptops Detected in Photo</Text>
+              <Text style={styles.photoCountSubtitle}>
+                Run inference to count laptops & detect hand signs
               </Text>
+            </View>
+            <View style={styles.photoCountBubble}>
+              <Text style={styles.photoCountNumber}>{photoCount}</Text>
             </View>
           </View>
         )}
       </View>
 
-      {/* Metrics & Confidence Controls */}
-      <View style={styles.bottomRow}>
-        <View style={styles.metricsGroup}>
-          <Text style={styles.metricText}>
-            ⚡ {metrics.inferenceTimeMs > 0 ? `${metrics.inferenceTimeMs}ms` : '--'}
-          </Text>
-          <Text style={styles.metricDivider}>|</Text>
-          <Text style={styles.metricText}>
-            🎯 {metrics.fps > 0 ? `${metrics.fps} FPS` : '--'}
-          </Text>
-        </View>
-
-        {/* Confidence Threshold Selectors */}
-        <View style={styles.thresholdGroup}>
-          <Text style={styles.thresholdLabel}>Min Conf:</Text>
-          {[0.3, 0.45, 0.6].map((thresh) => (
-            <TouchableOpacity
-              key={thresh}
-              style={[
-                styles.threshBadge,
-                confidenceThreshold === thresh && styles.threshBadgeActive,
-              ]}
-              onPress={() => onConfidenceChange(thresh)}
-            >
-              <Text
-                style={[
-                  styles.threshText,
-                  confidenceThreshold === thresh && styles.threshTextActive,
-                ]}
+      {/* Quick Test Bar: Instant Gesture Simulation & Haptic Feedback */}
+      {onSimulateGesture && (
+        <View style={styles.simulationBar}>
+          <Text style={styles.simLabel}>Test Gestures:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.simScroll}>
+            {(['finger_heart', 'scissor', 'thumbs_up', 'palm', 'fist'] as GestureClass[]).map((g) => (
+              <TouchableOpacity
+                key={g}
+                style={styles.simChip}
+                onPress={() => onSimulateGesture(g)}
               >
-                {Math.round(thresh * 100)}%
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.simChipText}>{GESTURE_EMOJIS[g] || g}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
-      </View>
+      )}
     </View>
   );
 };
@@ -138,145 +150,151 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#0F141C',
-    paddingTop: 44,
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: '#21262D',
   },
-  topRow: {
+  bannerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
-  appTitle: {
-    color: '#FFFFFF',
+  title: {
+    color: '#F0F6FC',
     fontSize: 16,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.3,
   },
   subtitle: {
-    color: '#94A3B8',
-    fontSize: 12,
+    color: '#8B949E',
+    fontSize: 11,
     marginTop: 2,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#1E2633',
     borderRadius: 8,
     padding: 3,
+    borderWidth: 1,
+    borderColor: '#30363D',
   },
   tabButton: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 6,
   },
   tabButtonActive: {
-    backgroundColor: '#38BDF8',
+    backgroundColor: '#00F0FF',
   },
   tabText: {
-    color: '#94A3B8',
+    color: '#8B949E',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   tabTextActive: {
-    color: '#0F172A',
+    color: '#070A0F',
   },
   hudCard: {
-    backgroundColor: '#161F2E',
+    backgroundColor: '#161B22',
     borderRadius: 10,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#243247',
-    marginBottom: 8,
+    borderColor: '#30363D',
   },
   statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  statBox: {
-    alignItems: 'center',
-  },
-  statLabel: {
-    color: '#64748B',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontSize: 26,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  antiOvercountHint: {
-    color: '#10B981',
-    fontSize: 9,
-    fontWeight: '600',
-    marginTop: 1,
-  },
-  statDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: '#243247',
-  },
-  resetButton: {
-    backgroundColor: '#334155',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  resetButtonText: {
-    color: '#F8FAFC',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  metricsGroup: {
-    flexDirection: 'row',
+  statBox: {
+    flex: 1,
     alignItems: 'center',
   },
-  metricText: {
-    color: '#38BDF8',
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#30363D',
+  },
+  statLabel: {
+    color: '#8B949E',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  statSubValue: {
+    color: '#F0F6FC',
     fontSize: 11,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
-  },
-  metricDivider: {
-    color: '#475569',
-    marginHorizontal: 6,
-    fontSize: 11,
-  },
-  thresholdGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  thresholdLabel: {
-    color: '#64748B',
-    fontSize: 11,
-    marginRight: 6,
-  },
-  threshBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-    backgroundColor: '#1E293B',
-    marginLeft: 4,
-  },
-  threshBadgeActive: {
-    backgroundColor: '#38BDF8',
-  },
-  threshText: {
-    color: '#94A3B8',
-    fontSize: 10,
     fontWeight: '700',
   },
-  threshTextActive: {
-    color: '#0F172A',
+  latencyText: {
+    color: '#8B949E',
+    fontSize: 9,
+  },
+  photoHudRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  photoCountTitle: {
+    color: '#F0F6FC',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  photoCountSubtitle: {
+    color: '#8B949E',
+    fontSize: 11,
+  },
+  photoCountBubble: {
+    backgroundColor: 'rgba(0, 240, 255, 0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#00F0FF',
+  },
+  photoCountNumber: {
+    color: '#00F0FF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  simulationBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#21262D',
+  },
+  simLabel: {
+    color: '#8B949E',
+    fontSize: 11,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  simScroll: {
+    alignItems: 'center',
+  },
+  simChip: {
+    backgroundColor: '#1E2633',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: '#30363D',
+  },
+  simChipText: {
+    color: '#F0F6FC',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

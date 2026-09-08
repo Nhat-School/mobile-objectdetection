@@ -63,18 +63,22 @@ export class ObjectTracker {
    * @returns List of active tracked objects with persistent unique IDs
    */
   public update(detections: DetectedObject[]): TrackedObject[] {
+    // Only track laptops (Class 0), ignore hand gestures for track IDs
+    const laptopDetections = detections.filter(
+      (d) => d.className === 'laptop' || d.classId === 0
+    );
     const activeTrackList = Array.from(this.activeTracks.values());
     const matchedDetectionIndices = new Set<number>();
     const matchedTrackIds = new Set<number>();
 
     // Step 1: Match detections with existing active tracks
-    if (activeTrackList.length > 0 && detections.length > 0) {
+    if (activeTrackList.length > 0 && laptopDetections.length > 0) {
       // Build similarity matrix using combined IoU and centroid distance
       const matches: { trackId: number; detIndex: number; score: number }[] = [];
 
       for (const track of activeTrackList) {
-        for (let j = 0; j < detections.length; j++) {
-          const det = detections[j];
+        for (let j = 0; j < laptopDetections.length; j++) {
+          const det = laptopDetections[j];
           const iou = calculateIoU(track.box, det.box);
           const detCentroid = getBoxCentroid(det.box);
           const dist = euclideanDistance(track.centroid, detCentroid);
@@ -101,7 +105,7 @@ export class ObjectTracker {
 
           // Update existing track
           const existingTrack = this.activeTracks.get(match.trackId)!;
-          const det = detections[match.detIndex];
+          const det = laptopDetections[match.detIndex];
           const newCentroid = getBoxCentroid(det.box);
 
           // Smooth coordinate updates (linear blend to eliminate bounding box flicker)
@@ -127,9 +131,9 @@ export class ObjectTracker {
     }
 
     // Step 2: Handle unmatched detections -> create new unique tracks
-    for (let j = 0; j < detections.length; j++) {
+    for (let j = 0; j < laptopDetections.length; j++) {
       if (!matchedDetectionIndices.has(j)) {
-        const det = detections[j];
+        const det = laptopDetections[j];
         const newTrackId = this.nextTrackId++;
         const centroid = getBoxCentroid(det.box);
         const color = getColorForTrackId(newTrackId);

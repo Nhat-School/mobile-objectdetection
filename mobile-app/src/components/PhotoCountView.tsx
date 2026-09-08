@@ -12,6 +12,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { BoundingBoxOverlay } from './BoundingBoxOverlay';
 import { DetectedObject } from '../types/detection';
+import { getColorForObject, getLabelForObject } from '../constants/modelConfig';
 
 interface PhotoCountViewProps {
   onRunPhotoInference: (
@@ -77,7 +78,6 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
   };
 
   const handleDemoTest = () => {
-    // High-resolution sample desk with laptops for instant validation
     const demoUri =
       'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80';
     processImage(demoUri);
@@ -98,6 +98,9 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
     }
   };
 
+  const laptopCount = detections.filter((d: DetectedObject) => d.className === 'laptop' || d.classId === 0).length;
+  const gestureCount = detections.filter((d: DetectedObject) => d.className !== 'laptop' && d.classId !== 0).length;
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {/* Image Preview Canvas */}
@@ -113,16 +116,16 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
             {isProcessing && (
               <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="large" color="#00F0FF" />
-                <Text style={styles.loadingText}>Analyzing photo with offline model...</Text>
+                <Text style={styles.loadingText}>Analyzing photo with offline universal model...</Text>
               </View>
             )}
           </>
         ) : (
           <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderIcon}>💻 📷</Text>
-            <Text style={styles.placeholderTitle}>No Photo Selected</Text>
+            <Text style={styles.placeholderIcon}>💻 ✌️</Text>
+            <Text style={styles.placeholderTitle}>Universal Detection Canvas</Text>
             <Text style={styles.placeholderSubtitle}>
-              Snap a photo or pick one from your gallery to count how many laptops are in it.
+              Snap a photo or choose from your gallery to simultaneously detect and count laptops and recognize hand gestures.
             </Text>
           </View>
         )}
@@ -148,29 +151,43 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
         <View style={styles.resultsCard}>
           <View style={styles.resultsHeader}>
             <Text style={styles.resultsTitle}>Detection Summary</Text>
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>
-                {detections.length} {detections.length === 1 ? 'Laptop' : 'Laptops'} Found
-              </Text>
+            <View style={styles.badgesRow}>
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>
+                  💻 {laptopCount} {laptopCount === 1 ? 'Laptop' : 'Laptops'}
+                </Text>
+              </View>
+              {gestureCount > 0 && (
+                <View style={[styles.countBadge, styles.gestureBadge]}>
+                  <Text style={styles.gestureBadgeText}>
+                    ✌️ {gestureCount} {gestureCount === 1 ? 'Gesture' : 'Gestures'}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
           {detections.length === 0 && !isProcessing ? (
             <Text style={styles.noDetectionsText}>
-              No laptops detected in this image. Ensure the laptop is clearly visible.
+              No laptops or hand gestures detected in this image.
             </Text>
           ) : (
-            detections.map((item, index) => (
-              <View key={item.id || index} style={styles.resultItem}>
-                <View style={styles.resultItemLeft}>
-                  <Text style={styles.itemIndex}>#{index + 1}</Text>
-                  <Text style={styles.itemName}>LAPTOP</Text>
+            detections.map((item: DetectedObject, index: number) => {
+              const itemColor = getColorForObject(item);
+              const label = getLabelForObject(item, index);
+              return (
+                <View key={item.id || index} style={styles.resultItem}>
+                  <View style={styles.resultItemLeft}>
+                    <View style={[styles.itemDot, { backgroundColor: itemColor }]} />
+                    <Text style={[styles.itemIndex, { color: itemColor }]}>#{index + 1}</Text>
+                    <Text style={styles.itemName}>{label}</Text>
+                  </View>
+                  <Text style={[styles.itemConfidence, { color: itemColor }]}>
+                    {Math.round(item.confidence * 100)}% Confidence
+                  </Text>
                 </View>
-                <Text style={styles.itemConfidence}>
-                  {Math.round(item.confidence * 100)}% Confidence
-                </Text>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       )}
@@ -197,6 +214,18 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(7, 10, 15, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#00F0FF',
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   placeholderContainer: {
     alignItems: 'center',
     paddingHorizontal: 32,
@@ -206,121 +235,133 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   placeholderTitle: {
-    color: '#E2E8F0',
+    color: '#F0F6FC',
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 6,
   },
   placeholderSubtitle: {
-    color: '#64748B',
+    color: '#8B949E',
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
   },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(11, 15, 23, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#00F0FF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 12,
-  },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: '#0F141C',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: '#21262D',
   },
   actionButton: {
-    backgroundColor: '#1E293B',
+    flex: 1,
+    backgroundColor: '#1E2633',
     paddingVertical: 10,
-    paddingHorizontal: 14,
     borderRadius: 8,
+    marginHorizontal: 4,
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#30363D',
   },
   actionButtonText: {
-    color: '#F8FAFC',
+    color: '#F0F6FC',
     fontSize: 12,
     fontWeight: '700',
   },
   demoButton: {
-    backgroundColor: '#0369A1',
-    borderColor: '#38BDF8',
+    borderColor: '#00F0FF',
+    backgroundColor: 'rgba(0, 240, 255, 0.1)',
   },
   demoButtonText: {
-    color: '#FFFFFF',
+    color: '#00F0FF',
     fontSize: 12,
     fontWeight: '700',
   },
   resultsCard: {
     margin: 16,
-    backgroundColor: '#161F2E',
+    backgroundColor: '#0F141C',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#243247',
+    borderColor: '#21262D',
   },
   resultsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   resultsTitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
+    color: '#F0F6FC',
+    fontSize: 16,
     fontWeight: '700',
   },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   countBadge: {
-    backgroundColor: '#00F0FF',
+    backgroundColor: 'rgba(0, 240, 255, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#00F0FF',
+    marginRight: 6,
   },
   countBadgeText: {
-    color: '#0F172A',
+    color: '#00F0FF',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
+  },
+  gestureBadge: {
+    backgroundColor: 'rgba(255, 20, 147, 0.15)',
+    borderColor: '#FF1493',
+    marginRight: 0,
+  },
+  gestureBadgeText: {
+    color: '#FF1493',
+    fontSize: 12,
+    fontWeight: '700',
   },
   noDetectionsText: {
-    color: '#94A3B8',
+    color: '#8B949E',
     fontSize: 13,
     fontStyle: 'italic',
+    paddingVertical: 8,
   },
   resultItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#1B2230',
   },
   resultItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  itemDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
   itemIndex: {
-    color: '#38BDF8',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-    width: 28,
+    marginRight: 6,
   },
   itemName: {
-    color: '#F1F5F9',
+    color: '#F0F6FC',
     fontSize: 13,
     fontWeight: '600',
   },
   itemConfidence: {
-    color: '#10B981',
-    fontSize: 13,
-    fontWeight: '700',
-    fontVariant: ['tabular-nums'],
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

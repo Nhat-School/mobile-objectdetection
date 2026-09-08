@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { StyleSheet, View, SafeAreaView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { ControlHeader } from './src/components/ControlHeader';
 import { LiveTrackingView } from './src/components/LiveTrackingView';
 import { PhotoCountView } from './src/components/PhotoCountView';
 import { useYoloDetector } from './src/hooks/useYoloDetector';
-import { DetectionMode } from './src/types/detection';
+import { DetectionMode, DetectedObject } from './src/types/detection';
 
 export default function App() {
   const [mode, setMode] = useState<DetectionMode>('live');
@@ -15,10 +15,13 @@ export default function App() {
     confidenceThreshold,
     setConfidenceThreshold,
     activeTracks,
+    activeGestureDetections,
     trackingStats,
+    gestureResult,
     metrics,
     isProcessing,
     resetTracker,
+    simulateGesture,
     runPhotoInference,
     processLiveFrame,
   } = useYoloDetector();
@@ -29,7 +32,10 @@ export default function App() {
     viewHeight: number
   ) => {
     const results = await runPhotoInference(imageUri, viewWidth, viewHeight);
-    setPhotoDetectionCount(results.length);
+    const laptopCount = results.filter(
+      (d: DetectedObject) => d.className === 'laptop' || d.classId === 0
+    ).length;
+    setPhotoDetectionCount(laptopCount);
     return results;
   };
 
@@ -37,7 +43,7 @@ export default function App() {
     <SafeAreaView style={styles.rootContainer}>
       <StatusBar style="light" backgroundColor="#0F141C" />
 
-      {/* Control Header & Live Statistics HUD */}
+      {/* Unified Option A Header & Status HUD */}
       <ControlHeader
         mode={mode}
         onModeChange={setMode}
@@ -47,14 +53,18 @@ export default function App() {
         confidenceThreshold={confidenceThreshold}
         onConfidenceChange={setConfidenceThreshold}
         metrics={metrics}
+        gestureResult={gestureResult}
+        onSimulateGesture={simulateGesture}
       />
 
-      {/* Main View Area (Live Video Tracking vs Photo Counter) */}
+      {/* Main View Area: Option A Simultaneous Live View or Photo Analysis */}
       <View style={styles.bodyContainer}>
         {mode === 'live' ? (
           <LiveTrackingView
             activeTracks={activeTracks}
+            activeGestureDetections={activeGestureDetections}
             trackingStats={trackingStats}
+            gestureResult={gestureResult}
             isProcessing={isProcessing}
             onCaptureFrame={processLiveFrame}
             onResetTracker={resetTracker}

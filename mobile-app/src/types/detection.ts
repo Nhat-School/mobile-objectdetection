@@ -1,4 +1,5 @@
-export type DetectionMode = 'photo' | 'live';
+﻿export type DetectionMode = 'live' | 'photo';
+export type GestureClass = 'finger_heart' | 'scissor' | 'thumbs_up' | 'palm' | 'fist' | 'none';
 
 export interface BoundingBox {
   /** Top-left X coordinate in view space (pixels) */
@@ -31,7 +32,7 @@ export interface DetectedObject {
   normalizedBox: NormalizedBox;
   /** Detection confidence score [0.0 - 1.0] */
   confidence: number;
-  /** Class ID (0 for laptop) */
+  /** Class ID (0: laptop, 1: finger_heart, 2: scissor, 3: thumbs_up, 4: palm, 5: fist) */
   classId: number;
   /** Human-readable class name */
   className: string;
@@ -61,6 +62,15 @@ export interface TrackingStats {
   activeTrackIds: number[];
 }
 
+export interface GestureDetectionResult {
+  gesture: GestureClass;
+  confidence: number;
+  box?: BoundingBox;
+  isTriggered: boolean;
+  cooldownRemainingMs: number;
+  totalTriggerCount: number;
+}
+
 export interface InferenceMetrics {
   /** Model inference duration in milliseconds */
   inferenceTimeMs: number;
@@ -73,5 +83,7 @@ export interface ModelConfig {
   inputHeight: number;
   classNames: string[];
   defaultConfidenceThreshold: number;
+  laptopConfidenceThreshold: number;
+  gestureConfidenceThreshold: number;
   defaultIouThreshold: number;
 }

@@ -1,73 +1,65 @@
-# 📱 Offline Mobile Laptop Detector & Tracker (Expo / React Native)
+﻿# 📱 Option A Mobile App: Universal Laptop Tracker & 5-Gesture Actions (Expo)
 
-A 100% **offline, on-device** mobile application designed to run with Expo for detecting, counting, and tracking laptops using your custom-trained YOLO model from Kaggle.
-
----
-
-## 🔒 100% Offline Architecture (No Cloud Dependency)
-
-This application executes inference **completely offline on your smartphone**:
-- **Zero Cloud API calls**: Roboflow is **NOT** used during inference. Your Roboflow API key is only used on Kaggle to download the training datasets.
-- **On-Device Model**: The app directly loads your trained model (`laptop_detector_float16.tflite`) from `assets/models/`.
-- **Works with No Internet / Airplane Mode**: Everything runs locally on device memory and hardware.
+A 100% **offline, on-device** mobile application built with React Native and Expo SDK 51. Simultaneously detects laptops, tracks unique laptop IDs with anti-overcounting, and recognizes all 5 hand gestures to trigger local device notifications and haptic feedback in the same camera view.
 
 ---
 
-## 🌟 Core Functions
-
-### 1. 📷 Photo Laptop Counter
-- Snap a photo or select an existing image from your phone gallery.
-- Performs on-device YOLO inference to detect all laptops.
-- Displays bounding boxes with confidence scores.
-- Tally HUD: **"Total Laptops Detected in Photo: N"**.
-- Full breakdown list of each detected laptop and coordinates.
-
-### 2. 🎥 Live Video Tracking & Anti-Overcounting (Unique ID Assignment)
-- Real-time camera feed using `expo-camera` (`CameraView`).
-- **Unique Object Tracking Engine**: Each detected laptop is assigned a persistent unique identifier (`Laptop #1`, `Laptop #2`, `Laptop #3`, etc.).
-- **Anti-Overcount Protection**:
-  - Implements **IoU + Centroid Distance Tracking** across frames.
-  - Moving the camera around the room or holding it on laptops **will never overcount the same laptop twice**!
-  - A new ID is minted only when a distinct, previously unseen laptop enters the frame.
-- **Dual Live Metrics**:
-  - **In View Now**: Number of laptops currently visible in the active frame.
-  - **Total Unique Laptops Counted**: Cumulative count of unique physical laptops seen during the session.
-- **One-Click Session Reset**: Tap `🔄 Reset` to clear tracking memory and start a new scan.
+## 🔒 100% Offline Edge Architecture
+- **Zero Cloud Runtime Calls**: Roboflow is **never called during mobile execution**. Your API key was strictly used on Kaggle for dataset downloads.
+- **On-Device Inference**: Models are loaded directly from `assets/models/universal_detector_float16.tflite`.
+- **Works in Airplane Mode**: Zero internet connection needed.
 
 ---
 
-## 🔌 Connecting Your Model from Kaggle to the App
+## 🌟 Simultaneous Features (Option A)
 
-After training finishes on Kaggle:
-1. In the Kaggle notebook output, download **`laptop_detector_mobile_models.zip`**.
-2. Extract the archive on your computer.
-3. Copy **`laptop_detector_float16.tflite`** into:
-   ```text
-   mobile-app/assets/models/laptop_detector_float16.tflite
-   ```
+### 🎥 1. Live Simultaneous Camera View
+- **Simultaneous Detection**: Both laptops and hand gestures are detected in the same frame.
+- **Anti-Overcounting Laptop Tracker**:
+  - Employs spatial IoU + Centroid tracking exclusively for laptops.
+  - Assigns persistent unique IDs (`Laptop #1`, `Laptop #2`) that persist across camera pans.
+  - Displays dual metrics: **Laptops In View** and **Total Unique Laptops Counted**.
+- **Hand Gesture Recognition & Device Actions**:
+  - Recognizes: 🫰 `finger_heart`, ✌️ `scissor`, 👍 `thumbs_up`, 👋 `palm`, ✊ `fist`.
+  - 5-frame hold verification (~0.35s continuous gesture) prevents accidental false positives.
+  - 3.0s cooldown timer prevents notification flooding.
+  - Fires localized push notifications and custom haptic vibrations.
+  - Displays a floating reaction emoji animation on the viewfinder.
+- **Simulation Bar**: Quick-tap buttons on the HUD to immediately preview all 5 vibrations and notifications without camera feed.
+
+---
+
+### 📷 2. Photo Analysis Mode
+- Snaps or picks a photo from your gallery.
+- Detects all laptops and hand gestures in the picture.
+- Color-coded bounding box overlays with class badges and confidence scores.
+- Full summary breakdown card with laptop and gesture tallies.
+
+---
+
+## 🔌 Deploying Your Trained Model
+
+Copy your exported `.tflite` model from Kaggle into:
+```text
+mobile-app/assets/models/universal_detector_float16.tflite
+```
+*(or `laptop_detector_float16.tflite`).*
 
 ---
 
 ## 🚀 How to Run the App
 
-### Step 1: Install Dependencies
+### 1. Install Dependencies
 ```bash
 cd mobile-app
 npm install
 ```
 
-### Step 2: Start Expo
+### 2. Start Expo
 ```bash
 npx expo start
 ```
 
-### Step 3: Run on your Phone
-- **Using Expo Go**:
-  - Download **Expo Go** from Google Play (Android) or App Store (iOS).
-  - Scan the terminal QR code to open the app.
-- **Using Native Development Build (Fastest GPU inference)**:
-  - For full hardware C++ GPU delegate acceleration:
-    ```bash
-    npx expo run:android   # Builds native Android APK
-    npx expo run:ios       # Builds native iOS app
-    ```
+### 3. Open in Expo Go
+- **Android**: Open **Expo Go** and scan the QR code.
+- **iOS**: Open the native **Camera** app, point at the QR code, and open in Expo Go.
