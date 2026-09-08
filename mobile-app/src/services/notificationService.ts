@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 /**
  * Service for dispatching instant local notifications and tactile haptics
- * when hand gestures (Finger Heart, Scissors) are recognized.
+ * for recognized hand gestures (Finger Heart, Scissors, Thumbs Up, Wave/Palm, Fist).
  * Works 100% offline without remote servers.
  */
 class NotificationService {
@@ -44,32 +44,33 @@ class NotificationService {
     }
   }
 
-  /**
-   * Dispatches a notification for Finger Heart gesture
-   */
-  public async sendHeartNotification(): Promise<void> {
-    console.log('❤️ TRIGGER: Finger Heart Notification');
+  private async dispatch(title: string, body: string, gesture: string, hapticStyle: 'success' | 'medium' | 'heavy' = 'medium') {
+    console.log(`🎯 GESTURE ACTION: ${title}`);
 
-    // Haptic vibration
+    // Tactile Haptic Vibration
     try {
       if (this.hapticsModule) {
-        await this.hapticsModule.notificationAsync(
-          this.hapticsModule.NotificationFeedbackType.Success
-        );
+        if (hapticStyle === 'success') {
+          await this.hapticsModule.notificationAsync(this.hapticsModule.NotificationFeedbackType.Success);
+        } else if (hapticStyle === 'heavy') {
+          await this.hapticsModule.impactAsync(this.hapticsModule.ImpactFeedbackStyle.Heavy);
+        } else {
+          await this.hapticsModule.impactAsync(this.hapticsModule.ImpactFeedbackStyle.Medium);
+        }
       }
     } catch (e) {}
 
-    // System Notification banner
+    // Offline System Banner Notification
     try {
       if (this.notificationsModule && this.hasPermission) {
         await this.notificationsModule.scheduleNotificationAsync({
           content: {
-            title: '❤️ Finger Heart Detected!',
-            body: 'You created a heart gesture with your fingers! 💕',
-            data: { gesture: 'finger_heart' },
+            title,
+            body,
+            data: { gesture },
             sound: true,
           },
-          trigger: null, // trigger immediately
+          trigger: null,
         });
       }
     } catch (e) {
@@ -77,37 +78,24 @@ class NotificationService {
     }
   }
 
-  /**
-   * Dispatches a notification for Scissor gesture
-   */
+  public async sendHeartNotification(): Promise<void> {
+    await this.dispatch('❤️ Finger Heart Detected!', 'You sent love with a finger heart! 💕', 'finger_heart', 'success');
+  }
+
   public async sendScissorNotification(): Promise<void> {
-    console.log('✂️ TRIGGER: Scissor Gesture Notification');
+    await this.dispatch('✂️ Scissor Gesture Detected!', 'Scissor / Victory hand sign recognized! ✌️', 'scissor', 'medium');
+  }
 
-    // Haptic vibration
-    try {
-      if (this.hapticsModule) {
-        await this.hapticsModule.impactAsync(
-          this.hapticsModule.ImpactFeedbackStyle.Medium
-        );
-      }
-    } catch (e) {}
+  public async sendThumbsUpNotification(): Promise<void> {
+    await this.dispatch('👍 Thumbs Up Detected!', 'Awesome! Keep up the great work! ✨', 'thumbs_up', 'success');
+  }
 
-    // System Notification banner
-    try {
-      if (this.notificationsModule && this.hasPermission) {
-        await this.notificationsModule.scheduleNotificationAsync({
-          content: {
-            title: '✂️ Scissor Gesture Detected!',
-            body: 'Scissor / Victory sign recognized! ✌️',
-            data: { gesture: 'scissor' },
-            sound: true,
-          },
-          trigger: null, // trigger immediately
-        });
-      }
-    } catch (e) {
-      console.warn('Notification schedule error:', e);
-    }
+  public async sendPalmNotification(): Promise<void> {
+    await this.dispatch('👋 Wave / Open Palm Detected!', 'Hello! Hand wave recognized! 🖐️', 'palm', 'medium');
+  }
+
+  public async sendFistNotification(): Promise<void> {
+    await this.dispatch('✊ Rock / Fist Detected!', 'Power sign recognized! Stay strong! 💥', 'fist', 'heavy');
   }
 }
 

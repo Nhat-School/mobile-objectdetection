@@ -1,6 +1,12 @@
 import { notificationService } from '../services/notificationService';
 
-export type GestureType = 'finger_heart' | 'scissor' | 'none';
+export type GestureType =
+  | 'finger_heart'
+  | 'scissor'
+  | 'thumbs_up'
+  | 'palm'
+  | 'fist'
+  | 'none';
 
 export interface GestureStateEvent {
   gesture: GestureType;
@@ -12,9 +18,9 @@ export interface GestureStateEvent {
 export class GestureStateMachine {
   private activeGesture: GestureType = 'none';
   private consecutiveCount: number = 0;
-  private minHoldFrames: number = 5; // ~0.35s at 15 FPS
+  private minHoldFrames: number = 5; // ~0.35s confirmation window
   private lastTriggerTimestamp: number = 0;
-  private cooldownMs: number = 3000; // 3-second cooldown
+  private cooldownMs: number = 3000; // 3-second anti-spam lock
 
   /**
    * Processes each detection frame and determines if an action notification should trigger.
@@ -50,10 +56,22 @@ export class GestureStateMachine {
         this.lastTriggerTimestamp = now;
         isTriggered = true;
 
-        if (this.activeGesture === 'finger_heart') {
-          notificationService.sendHeartNotification();
-        } else if (this.activeGesture === 'scissor') {
-          notificationService.sendScissorNotification();
+        switch (this.activeGesture) {
+          case 'finger_heart':
+            notificationService.sendHeartNotification();
+            break;
+          case 'scissor':
+            notificationService.sendScissorNotification();
+            break;
+          case 'thumbs_up':
+            notificationService.sendThumbsUpNotification();
+            break;
+          case 'palm':
+            notificationService.sendPalmNotification();
+            break;
+          case 'fist':
+            notificationService.sendFistNotification();
+            break;
         }
       }
     }
