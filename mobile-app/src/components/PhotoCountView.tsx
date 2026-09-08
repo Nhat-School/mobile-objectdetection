@@ -9,7 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { BoundingBoxOverlay } from './BoundingBoxOverlay';
 import { DetectedObject } from '../types/detection';
 
@@ -34,38 +34,52 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
 
   const handleSelectFromGallery = async () => {
     try {
-      const result = await launchImageLibrary({
-        mediaType: 'photo',
-        quality: 0.9,
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        alert('Photo library permission is required to select images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.85,
       });
 
-      if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         processImage(result.assets[0].uri);
       }
     } catch (err) {
-      console.warn('Gallery error:', err);
+      console.warn('Gallery picker error:', err);
     }
   };
 
   const handleCapturePhoto = async () => {
     try {
-      const result = await launchCamera({
-        mediaType: 'photo',
-        quality: 0.9,
-        saveToPhotos: false,
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        alert('Camera permission is required to capture photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.85,
       });
 
-      if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         processImage(result.assets[0].uri);
       }
     } catch (err) {
-      console.warn('Camera error:', err);
+      console.warn('Camera capture error:', err);
     }
   };
 
   const handleDemoTest = () => {
-    // Sample high-contrast demo image with laptops for instant validation
-    const demoUri = 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80';
+    // High-resolution sample desk with laptops for instant validation
+    const demoUri =
+      'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80';
     processImage(demoUri);
   };
 
@@ -99,7 +113,7 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
             {isProcessing && (
               <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="large" color="#00F0FF" />
-                <Text style={styles.loadingText}>Analyzing photo with YOLO...</Text>
+                <Text style={styles.loadingText}>Analyzing photo with Roboflow API...</Text>
               </View>
             )}
           </>
@@ -108,7 +122,7 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
             <Text style={styles.placeholderIcon}>💻 📷</Text>
             <Text style={styles.placeholderTitle}>No Photo Selected</Text>
             <Text style={styles.placeholderSubtitle}>
-              Capture a photo or pick one from your gallery to count laptops.
+              Snap a photo or pick one from your gallery to count how many laptops are in it.
             </Text>
           </View>
         )}
@@ -143,14 +157,14 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
 
           {detections.length === 0 && !isProcessing ? (
             <Text style={styles.noDetectionsText}>
-              No laptops detected. Try lowering the confidence threshold or taking a clearer photo.
+              No laptops detected in this image. Ensure the laptop is clearly visible.
             </Text>
           ) : (
             detections.map((item, index) => (
               <View key={item.id || index} style={styles.resultItem}>
                 <View style={styles.resultItemLeft}>
                   <Text style={styles.itemIndex}>#{index + 1}</Text>
-                  <Text style={styles.itemName}>{item.className.toUpperCase()}</Text>
+                  <Text style={styles.itemName}>LAPTOP</Text>
                 </View>
                 <Text style={styles.itemConfidence}>
                   {Math.round(item.confidence * 100)}% Confidence
@@ -167,7 +181,7 @@ export const PhotoCountView: React.FC<PhotoCountViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0F17',
+    backgroundColor: '#070A0F',
   },
   contentContainer: {
     paddingBottom: 40,

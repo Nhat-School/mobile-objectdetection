@@ -1,4 +1,45 @@
 {
-  "name": "LaptopDetectorApp",
-  "displayName": "Laptop Detector & Tracker"
+  "expo": {
+    "name": "Laptop Detector & Tracker",
+    "slug": "laptop-detector-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0F141C"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera permission is required to detect and track laptops in real time.",
+        "NSPhotoLibraryUsageDescription": "Photo library access is required to count laptops in photos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0F141C"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Laptop Detector to access your camera to count laptops."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Laptop Detector to access your photos to count laptops."
+        }
+      ]
+    ]
+  }
 }

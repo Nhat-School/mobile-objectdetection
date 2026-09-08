@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,82 +7,130 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import {
-  Camera,
-  useCameraDevice,
-  useCameraPermission,
-} from 'react-native-vision-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { BoundingBoxOverlay } from './BoundingBoxOverlay';
-import { TrackedObject, TrackingStats } from '../types/detection';
+import { DetectedObject, TrackedObject, TrackingStats } from '../types/detection';
 
 interface LiveTrackingViewProps {
   activeTracks: TrackedObject[];
   trackingStats: TrackingStats;
-  isModelReady: boolean;
-  onFrameDetectionsUpdate?: (tracks: TrackedObject[]) => void;
+  isProcessing: boolean;
+  onCaptureFrame: (uri: string, width: number, height: number) => Promise<void>;
+  onResetTracker: () => void;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const CAMERA_HEIGHT = SCREEN_HEIGHT * 0.68;
 
 export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({
   activeTracks,
   trackingStats,
-  isModelReady,
+  isProcessing,
+  onCaptureFrame,
+  onResetTracker,
 }) => {
-  const { hasPermission, requestPermission } = useCameraPermission();
-  const [cameraPosition, setCameraPosition] = useState<'back' | 'front'>('back');
-  const device = useCameraDevice(cameraPosition);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [facing, setFacing] = useState<'back' | 'front'>('back');
+  const [isScanning, setIsScanning] = useState<boolean>(true);
+  const cameraRef = useRef<CameraView>(null);
+  const isLoopRunning = useRef<boolean>(false);
 
+  // Background frame capture loop for live tracking
   useEffect(() => {
-    if (!hasPermission) {
-      requestPermission();
+    isLoopRunning.current = isScanning;
+
+    const captureLoop = async () => {
+      while (isLoopRunning.current) {
+        if (cameraRef.current && !isProcessing) {
+          try {
+            const photo = await cameraRef.current.takePictureAsync({
+              quality: 0.5,
+              skipProcessing: true,
+            });
+            if (photo && photo.uri) {
+              await onCaptureFrame(photo.uri, SCREEN_WIDTH, CAMERA_HEIGHT);
+            }
+          } catch (e) {
+            // Frame skip during fast motion or camera focus
+          }
+        }
+        // Throttle interval between live frames to prevent battery drain
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+    };
+
+    if (isScanning && permission?.granted) {
+      captureLoop();
     }
-  }, [hasPermission, requestPermission]);
 
-  const toggleCamera = () => {
-    setCameraPosition((prev) => (prev === 'back' ? 'front' : 'back'));
-  };
+    return () => {
+      isLoopRunning.current = false;
+    };
+  }, [isScanning, permission?.granted, isProcessing, onCaptureFrame]);
 
-  if (!hasPermission) {
+  if (!permission) {
+    return (
+      <View style={styles.permissionContainer}>
+        <ActivityIndicator size="large" color="#00F0FF" />
+        <Text style={styles.permissionSubtitle}>Checking camera permissions...</Text>
+      </View>
+    );
+  }
+
+  if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
         <Text style={styles.permissionTitle}>Camera Permission Required</Text>
         <Text style={styles.permissionSubtitle}>
-          Please grant camera access to detect and track laptops in real time.
+          Expo Go needs camera access to detect and track laptops in live video.
         </Text>
         <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Grant Permission</Text>
+          <Text style={styles.permissionButtonText}>Allow Camera Access</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  if (!device) {
-    return (
-      <View style={styles.permissionContainer}>
-        <ActivityIndicator size="large" color="#00F0FF" />
-        <Text style={styles.permissionSubtitle}>Searching for camera device...</Text>
-      </View>
-    );
-  }
+  const toggleFacing = () => {
+    setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
+  };
+
+  const toggleScanning = () => {
+    setIsScanning((prev) => !prev);
+  };
 
   return (
     <View style={styles.container}>
-      {/* Live Camera Feed */}
-      <Camera
-        style={StyleSheet.absoluteFill}
-        device={device}
-        isActive={true}
-        enableFpsGraph={false}
-      />
+      {/* Live Camera View from Expo-Camera */}
+      <View style={[styles.cameraWrapper, { width: SCREEN_WIDTH, height: CAMERA_HEIGHT }]}>
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          facing={facing}
+          animateShutter={false}
+        />
 
-      {/* Real-time Bounding Box & Unique Track ID Overlay */}
-      <BoundingBoxOverlay detections={activeTracks} isLiveTracking={true} />
+        {/* Bounding Box & Unique ID Overlay */}
+        <BoundingBoxOverlay detections={activeTracks} isLiveTracking={true} />
 
-      {/* Floating Camera Controls & Active Track Chips */}
-      <View style={styles.bottomControls}>
-        {/* Active Track ID Indicators */}
-        <View style={styles.trackChipsContainer}>
+        {/* Live scanning status pulse */}
+        <View style={styles.scannerBadge}>
+          <View
+            style={[
+              styles.pulseDot,
+              { backgroundColor: isScanning ? '#39FF14' : '#EF4444' },
+            ]}
+          />
+          <Text style={styles.scannerBadgeText}>
+            {isScanning ? (isProcessing ? 'SCANNING...' : 'LIVE TRACKING') : 'PAUSED'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Floating Controls & Active Track Chips */}
+      <View style={styles.controlsContainer}>
+        {/* Track Chips Row */}
+        <View style={styles.chipsRow}>
           {activeTracks.map((track) => (
             <View
               key={track.trackId}
@@ -90,7 +138,7 @@ export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({
             >
               <View style={[styles.trackDot, { backgroundColor: track.color }]} />
               <Text style={styles.trackChipText}>
-                ID #{track.trackId}
+                ID #{track.trackId} ({Math.round(track.confidence * 100)}%)
               </Text>
             </View>
           ))}
@@ -101,10 +149,25 @@ export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({
           )}
         </View>
 
-        {/* Flip Camera Button */}
-        <TouchableOpacity style={styles.flipButton} onPress={toggleCamera}>
-          <Text style={styles.flipButtonText}>🔄 Flip Camera</Text>
-        </TouchableOpacity>
+        {/* Action Buttons */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.controlBtn, isScanning ? styles.pauseBtn : styles.resumeBtn]}
+            onPress={toggleScanning}
+          >
+            <Text style={styles.controlBtnText}>
+              {isScanning ? '⏸️ Pause' : '▶️ Resume'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.controlBtn} onPress={toggleFacing}>
+            <Text style={styles.controlBtnText}>🔄 Flip Camera</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.controlBtn, styles.resetBtn]} onPress={onResetTracker}>
+            <Text style={styles.resetBtnText}>🔄 Reset IDs</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -113,8 +176,12 @@ export const LiveTrackingView: React.FC<LiveTrackingViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#070A0F',
+  },
+  cameraWrapper: {
     position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#1E293B',
   },
   permissionContainer: {
     flex: 1,
@@ -147,37 +214,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  bottomControls: {
+  scannerBadge: {
     position: 'absolute',
-    bottom: 24,
-    left: 16,
-    right: 16,
+    top: 12,
+    left: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  pulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  scannerBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  controlsContainer: {
+    flex: 1,
+    padding: 16,
     justifyContent: 'space-between',
   },
-  trackChipsContainer: {
-    flex: 1,
+  chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginRight: 12,
+    marginBottom: 8,
   },
   trackChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: '#161F2E',
     borderWidth: 1.5,
     borderRadius: 14,
     paddingHorizontal: 8,
     paddingVertical: 4,
     marginRight: 6,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   trackDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginRight: 5,
+    marginRight: 6,
   },
   trackChipText: {
     color: '#FFFFFF',
@@ -185,24 +272,41 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   emptyTrackingText: {
-    color: 'rgba(255, 255, 255, 0.65)',
-    fontSize: 12,
+    color: '#64748B',
+    fontSize: 13,
     fontStyle: 'italic',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
   },
-  flipButton: {
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 20,
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  controlBtn: {
+    flex: 1,
+    backgroundColor: '#1E293B',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 4,
     borderWidth: 1,
     borderColor: '#334155',
   },
-  flipButtonText: {
+  controlBtnText: {
     color: '#F8FAFC',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  pauseBtn: {
+    backgroundColor: '#1E293B',
+  },
+  resumeBtn: {
+    backgroundColor: '#065F46',
+    borderColor: '#10B981',
+  },
+  resetBtn: {
+    backgroundColor: '#334155',
+  },
+  resetBtnText: {
+    color: '#38BDF8',
     fontSize: 12,
     fontWeight: '700',
   },

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, StatusBar, SafeAreaView } from 'react-native';
+import { StyleSheet, View, SafeAreaView } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { ControlHeader } from './src/components/ControlHeader';
 import { LiveTrackingView } from './src/components/LiveTrackingView';
 import { PhotoCountView } from './src/components/PhotoCountView';
@@ -11,12 +12,12 @@ export default function App() {
   const [photoDetectionCount, setPhotoDetectionCount] = useState<number>(0);
 
   const {
-    isModelLoaded,
     confidenceThreshold,
     setConfidenceThreshold,
     activeTracks,
     trackingStats,
     metrics,
+    isProcessing,
     resetTracker,
     runPhotoInference,
     processLiveFrame,
@@ -34,7 +35,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.rootContainer}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F141C" />
+      <StatusBar style="light" backgroundColor="#0F141C" />
 
       {/* Control Header & Live Statistics HUD */}
       <ControlHeader
@@ -54,8 +55,9 @@ export default function App() {
           <LiveTrackingView
             activeTracks={activeTracks}
             trackingStats={trackingStats}
-            isModelReady={isModelLoaded}
-            onFrameDetectionsUpdate={processLiveFrame}
+            isProcessing={isProcessing}
+            onCaptureFrame={processLiveFrame}
+            onResetTracker={resetTracker}
           />
         ) : (
           <PhotoCountView
@@ -75,6 +77,6 @@ const styles = StyleSheet.create({
   },
   bodyContainer: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#070A0F',
   },
 });
