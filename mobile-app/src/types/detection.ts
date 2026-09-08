@@ -1,5 +1,4 @@
-export type AppDomainMode = 'laptop' | 'gesture';
-export type DetectionMode = 'photo' | 'live';
+﻿export type DetectionMode = 'live' | 'photo';
 export type GestureClass = 'finger_heart' | 'scissor' | 'thumbs_up' | 'palm' | 'fist' | 'none';
 
 export interface BoundingBox {
@@ -33,7 +32,7 @@ export interface DetectedObject {
   normalizedBox: NormalizedBox;
   /** Detection confidence score [0.0 - 1.0] */
   confidence: number;
-  /** Class ID (0 for laptop) */
+  /** Class ID (0: laptop, 1: finger_heart, 2: scissor, 3: thumbs_up, 4: palm, 5: fist) */
   classId: number;
   /** Human-readable class name */
   className: string;
@@ -84,5 +83,7 @@ export interface ModelConfig {
   inputHeight: number;
   classNames: string[];
   defaultConfidenceThreshold: number;
+  laptopConfidenceThreshold: number;
+  gestureConfidenceThreshold: number;
   defaultIouThreshold: number;
 }

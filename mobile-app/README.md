@@ -1,50 +1,49 @@
-﻿# 📱 Offline Mobile Detector & Interactive Gesture Tracker (Expo / React Native)
+﻿# 📱 Option A Mobile App: Universal Laptop Tracker & 5-Gesture Actions (Expo)
 
-A 100% **offline, on-device** mobile application built with React Native and Expo SDK 51 for detecting, counting, and tracking laptops, plus interactive hand gesture recognition with local device notifications.
+A 100% **offline, on-device** mobile application built with React Native and Expo SDK 51. Simultaneously detects laptops, tracks unique laptop IDs with anti-overcounting, and recognizes all 5 hand gestures to trigger local device notifications and haptic feedback in the same camera view.
 
 ---
 
 ## 🔒 100% Offline Edge Architecture
-- **Zero Cloud API Calls**: Roboflow is **never called during mobile runtime**. Your API key is strictly used on Kaggle for dataset downloads.
-- **On-Device Inference**: Models are loaded directly from `assets/models/` as quantized `.tflite` binaries.
-- **Works in Airplane Mode**: Zero internet connectivity required.
+- **Zero Cloud Runtime Calls**: Roboflow is **never called during mobile execution**. Your API key was strictly used on Kaggle for dataset downloads.
+- **On-Device Inference**: Models are loaded directly from `assets/models/universal_detector_float16.tflite`.
+- **Works in Airplane Mode**: Zero internet connection needed.
 
 ---
 
-## 🌟 Dual-Domain Modes (Option B)
+## 🌟 Simultaneous Features (Option A)
 
-### 💻 1. Laptop Detector Domain
-- **📷 Photo Mode**: 
-  - Snap or pick an image to detect all laptops.
-  - Multi-colored bounding boxes (`#00F0FF` Cyan, `#39FF14` Lime, `#FF5722` Orange, `#FFD700` Gold, etc.).
-  - Overlaid top labels (`Laptop 1`, `Laptop 2`) and confidence percentages.
-  - Summary count banner: **"Total Laptops Detected in Photo: N"**.
-- **🎥 Live Video Mode**:
-  - Real-time camera feed using `expo-camera`.
-  - **IoU + Centroid Tracker**: Assigns persistent track IDs (`Laptop #1`, `Laptop #2`) preventing duplicate counts when moving the camera.
-  - Dual metrics: **In View Now** and **Total Unique Laptops Counted**.
-
----
-
-### ✌️ 2. Hand Gesture Domain
-Recognizes 5 hand gestures completely offline:
-1. 🫰 **Finger Heart** (`finger_heart`) -> Local notification: *"Sending love! ❤️"* + Double vibration
-2. ✌️ **Scissors** (`scissor`) -> Local notification: *"Scissors detected! ✂️"* + Warning vibration
-3. 👍 **Thumbs Up** (`thumbs_up`) -> Local notification: *"Great job! 👍"* + Success vibration
-4. 👋 **Open Palm / Wave** (`palm`) -> Local notification: *"Hello there! 👋"* + Soft tap
-5. ✊ **Rock / Fist** (`fist`) -> Local notification: *"Power fist! ✊"* + Heavy impact
-
-- **5-Frame Hold Verification**: Requires 5 consecutive frames before triggering to eliminate accidental false positives.
-- **3.0-Second Cooldown**: Prevents notification and vibration spam.
-- **HUD Simulation**: Quick test buttons to preview vibrations and notifications immediately without camera feed.
+### 🎥 1. Live Simultaneous Camera View
+- **Simultaneous Detection**: Both laptops and hand gestures are detected in the same frame.
+- **Anti-Overcounting Laptop Tracker**:
+  - Employs spatial IoU + Centroid tracking exclusively for laptops.
+  - Assigns persistent unique IDs (`Laptop #1`, `Laptop #2`) that persist across camera pans.
+  - Displays dual metrics: **Laptops In View** and **Total Unique Laptops Counted**.
+- **Hand Gesture Recognition & Device Actions**:
+  - Recognizes: 🫰 `finger_heart`, ✌️ `scissor`, 👍 `thumbs_up`, 👋 `palm`, ✊ `fist`.
+  - 5-frame hold verification (~0.35s continuous gesture) prevents accidental false positives.
+  - 3.0s cooldown timer prevents notification flooding.
+  - Fires localized push notifications and custom haptic vibrations.
+  - Displays a floating reaction emoji animation on the viewfinder.
+- **Simulation Bar**: Quick-tap buttons on the HUD to immediately preview all 5 vibrations and notifications without camera feed.
 
 ---
 
-## 🔌 Deploying Your Trained Models
+### 📷 2. Photo Analysis Mode
+- Snaps or picks a photo from your gallery.
+- Detects all laptops and hand gestures in the picture.
+- Color-coded bounding box overlays with class badges and confidence scores.
+- Full summary breakdown card with laptop and gesture tallies.
 
-Place your exported `.tflite` models into `assets/models/`:
-- `mobile-app/assets/models/laptop_detector_float16.tflite`
-- `mobile-app/assets/models/gesture_detector_float16.tflite`
+---
+
+## 🔌 Deploying Your Trained Model
+
+Copy your exported `.tflite` model from Kaggle into:
+```text
+mobile-app/assets/models/universal_detector_float16.tflite
+```
+*(or `laptop_detector_float16.tflite`).*
 
 ---
 

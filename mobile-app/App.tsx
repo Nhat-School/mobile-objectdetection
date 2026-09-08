@@ -1,23 +1,21 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { StyleSheet, View, SafeAreaView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { ControlHeader } from './src/components/ControlHeader';
 import { LiveTrackingView } from './src/components/LiveTrackingView';
 import { PhotoCountView } from './src/components/PhotoCountView';
-import { GestureActionView } from './src/components/GestureActionView';
 import { useYoloDetector } from './src/hooks/useYoloDetector';
-import { DetectionMode } from './src/types/detection';
+import { DetectionMode, DetectedObject } from './src/types/detection';
 
 export default function App() {
   const [mode, setMode] = useState<DetectionMode>('live');
   const [photoDetectionCount, setPhotoDetectionCount] = useState<number>(0);
 
   const {
-    appDomain,
-    setAppDomain,
     confidenceThreshold,
     setConfidenceThreshold,
     activeTracks,
+    activeGestureDetections,
     trackingStats,
     gestureResult,
     metrics,
@@ -26,7 +24,6 @@ export default function App() {
     simulateGesture,
     runPhotoInference,
     processLiveFrame,
-    processGestureFrame,
   } = useYoloDetector();
 
   const handlePhotoInference = async (
@@ -35,7 +32,10 @@ export default function App() {
     viewHeight: number
   ) => {
     const results = await runPhotoInference(imageUri, viewWidth, viewHeight);
-    setPhotoDetectionCount(results.length);
+    const laptopCount = results.filter(
+      (d: DetectedObject) => d.className === 'laptop' || d.classId === 0
+    ).length;
+    setPhotoDetectionCount(laptopCount);
     return results;
   };
 
@@ -43,10 +43,8 @@ export default function App() {
     <SafeAreaView style={styles.rootContainer}>
       <StatusBar style="light" backgroundColor="#0F141C" />
 
-      {/* Top Header & Option B Domain Switcher */}
+      {/* Unified Option A Header & Status HUD */}
       <ControlHeader
-        appDomain={appDomain}
-        onAppDomainChange={setAppDomain}
         mode={mode}
         onModeChange={setMode}
         trackingStats={trackingStats}
@@ -56,32 +54,25 @@ export default function App() {
         onConfidenceChange={setConfidenceThreshold}
         metrics={metrics}
         gestureResult={gestureResult}
+        onSimulateGesture={simulateGesture}
       />
 
-      {/* Main View Area: Option B Modular Views */}
+      {/* Main View Area: Option A Simultaneous Live View or Photo Analysis */}
       <View style={styles.bodyContainer}>
-        {appDomain === 'laptop' ? (
-          mode === 'live' ? (
-            <LiveTrackingView
-              activeTracks={activeTracks}
-              trackingStats={trackingStats}
-              isProcessing={isProcessing}
-              onCaptureFrame={processLiveFrame}
-              onResetTracker={resetTracker}
-            />
-          ) : (
-            <PhotoCountView
-              onRunPhotoInference={handlePhotoInference}
-              confidenceThreshold={confidenceThreshold}
-            />
-          )
-        ) : (
-          /* Hand Gesture Mode */
-          <GestureActionView
+        {mode === 'live' ? (
+          <LiveTrackingView
+            activeTracks={activeTracks}
+            activeGestureDetections={activeGestureDetections}
+            trackingStats={trackingStats}
             gestureResult={gestureResult}
-            onSimulateGesture={simulateGesture}
-            onCaptureFrame={processGestureFrame}
             isProcessing={isProcessing}
+            onCaptureFrame={processLiveFrame}
+            onResetTracker={resetTracker}
+          />
+        ) : (
+          <PhotoCountView
+            onRunPhotoInference={handlePhotoInference}
+            confidenceThreshold={confidenceThreshold}
           />
         )}
       </View>
