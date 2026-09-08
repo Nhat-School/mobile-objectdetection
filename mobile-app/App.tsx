@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ControlHeader } from './src/components/ControlHeader';
 import { LiveTrackingView } from './src/components/LiveTrackingView';
 import { PhotoCountView } from './src/components/PhotoCountView';
+import { GestureActionView } from './src/components/GestureActionView';
 import { useYoloDetector } from './src/hooks/useYoloDetector';
 import { DetectionMode } from './src/types/detection';
 
@@ -12,15 +13,20 @@ export default function App() {
   const [photoDetectionCount, setPhotoDetectionCount] = useState<number>(0);
 
   const {
+    appDomain,
+    setAppDomain,
     confidenceThreshold,
     setConfidenceThreshold,
     activeTracks,
     trackingStats,
+    gestureResult,
     metrics,
     isProcessing,
     resetTracker,
+    simulateGesture,
     runPhotoInference,
     processLiveFrame,
+    processGestureFrame,
   } = useYoloDetector();
 
   const handlePhotoInference = async (
@@ -37,8 +43,10 @@ export default function App() {
     <SafeAreaView style={styles.rootContainer}>
       <StatusBar style="light" backgroundColor="#0F141C" />
 
-      {/* Control Header & Live Statistics HUD */}
+      {/* Top Header & Option B Domain Switcher */}
       <ControlHeader
+        appDomain={appDomain}
+        onAppDomainChange={setAppDomain}
         mode={mode}
         onModeChange={setMode}
         trackingStats={trackingStats}
@@ -47,22 +55,33 @@ export default function App() {
         confidenceThreshold={confidenceThreshold}
         onConfidenceChange={setConfidenceThreshold}
         metrics={metrics}
+        gestureResult={gestureResult}
       />
 
-      {/* Main View Area (Live Video Tracking vs Photo Counter) */}
+      {/* Main View Area: Option B Modular Views */}
       <View style={styles.bodyContainer}>
-        {mode === 'live' ? (
-          <LiveTrackingView
-            activeTracks={activeTracks}
-            trackingStats={trackingStats}
-            isProcessing={isProcessing}
-            onCaptureFrame={processLiveFrame}
-            onResetTracker={resetTracker}
-          />
+        {appDomain === 'laptop' ? (
+          mode === 'live' ? (
+            <LiveTrackingView
+              activeTracks={activeTracks}
+              trackingStats={trackingStats}
+              isProcessing={isProcessing}
+              onCaptureFrame={processLiveFrame}
+              onResetTracker={resetTracker}
+            />
+          ) : (
+            <PhotoCountView
+              onRunPhotoInference={handlePhotoInference}
+              confidenceThreshold={confidenceThreshold}
+            />
+          )
         ) : (
-          <PhotoCountView
-            onRunPhotoInference={handlePhotoInference}
-            confidenceThreshold={confidenceThreshold}
+          /* Hand Gesture Mode */
+          <GestureActionView
+            gestureResult={gestureResult}
+            onSimulateGesture={simulateGesture}
+            onCaptureFrame={processGestureFrame}
+            isProcessing={isProcessing}
           />
         )}
       </View>

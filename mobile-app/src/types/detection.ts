@@ -1,4 +1,6 @@
+export type AppDomainMode = 'laptop' | 'gesture';
 export type DetectionMode = 'photo' | 'live';
+export type GestureClass = 'finger_heart' | 'scissor' | 'thumbs_up' | 'palm' | 'fist' | 'none';
 
 export interface BoundingBox {
   /** Top-left X coordinate in view space (pixels) */
@@ -59,6 +61,15 @@ export interface TrackingStats {
   totalUniqueCounted: number;
   /** Active unique track IDs present */
   activeTrackIds: number[];
+}
+
+export interface GestureDetectionResult {
+  gesture: GestureClass;
+  confidence: number;
+  box?: BoundingBox;
+  isTriggered: boolean;
+  cooldownRemainingMs: number;
+  totalTriggerCount: number;
 }
 
 export interface InferenceMetrics {

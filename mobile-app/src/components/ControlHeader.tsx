@@ -1,8 +1,16 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { DetectionMode, TrackingStats, InferenceMetrics } from '../types/detection';
+import {
+  AppDomainMode,
+  DetectionMode,
+  TrackingStats,
+  InferenceMetrics,
+  GestureDetectionResult,
+} from '../types/detection';
 
 interface ControlHeaderProps {
+  appDomain: AppDomainMode;
+  onAppDomainChange: (domain: AppDomainMode) => void;
   mode: DetectionMode;
   onModeChange: (mode: DetectionMode) => void;
   trackingStats: TrackingStats;
@@ -11,9 +19,12 @@ interface ControlHeaderProps {
   confidenceThreshold: number;
   onConfidenceChange: (val: number) => void;
   metrics: InferenceMetrics;
+  gestureResult?: GestureDetectionResult;
 }
 
 export const ControlHeader: React.FC<ControlHeaderProps> = ({
+  appDomain,
+  onAppDomainChange,
   mode,
   onModeChange,
   trackingStats,
@@ -22,78 +33,128 @@ export const ControlHeader: React.FC<ControlHeaderProps> = ({
   confidenceThreshold,
   onConfidenceChange,
   metrics,
+  gestureResult,
 }) => {
   return (
     <View style={styles.container}>
-      {/* App Bar Title & Mode Switcher */}
-      <View style={styles.topRow}>
-        <View>
-          <Text style={styles.appTitle}>💻 LAPTOP DETECTOR</Text>
-          <Text style={styles.subtitle}>
-            {mode === 'live' ? 'Live Video Tracking' : 'Photo Counter'}
+      {/* Top Main Domain Switcher (Option B Architecture) */}
+      <View style={styles.domainSwitcherContainer}>
+        <TouchableOpacity
+          style={[styles.domainTab, appDomain === 'laptop' && styles.domainTabActive]}
+          onPress={() => onAppDomainChange('laptop')}
+        >
+          <Text style={[styles.domainTabText, appDomain === 'laptop' && styles.domainTabTextActive]}>
+            💻 Laptop Detector
           </Text>
-        </View>
+        </TouchableOpacity>
 
-        {/* Tab Switcher */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabButton, mode === 'live' && styles.tabButtonActive]}
-            onPress={() => onModeChange('live')}
-          >
-            <Text style={[styles.tabText, mode === 'live' && styles.tabTextActive]}>
-              🎥 Live Video
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabButton, mode === 'photo' && styles.tabButtonActive]}
-            onPress={() => onModeChange('photo')}
-          >
-            <Text style={[styles.tabText, mode === 'photo' && styles.tabTextActive]}>
-              📷 Photo
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.domainTab, appDomain === 'gesture' && styles.domainTabGestureActive]}
+          onPress={() => onAppDomainChange('gesture')}
+        >
+          <Text style={[styles.domainTabText, appDomain === 'gesture' && styles.domainTabTextActive]}>
+            ✌️ Hand Gestures
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Dynamic Counter & Status HUD */}
-      <View style={styles.hudCard}>
-        {mode === 'live' ? (
+      {/* Sub-Header & Controls */}
+      {appDomain === 'laptop' ? (
+        <>
+          {/* Laptop Mode Controls */}
+          <View style={styles.topRow}>
+            <View>
+              <Text style={styles.subtitle}>
+                {mode === 'live' ? 'Live Video Tracking' : 'Photo Counter'}
+              </Text>
+            </View>
+
+            {/* Tab Switcher: Live vs Photo */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tabButton, mode === 'live' && styles.tabButtonActive]}
+                onPress={() => onModeChange('live')}
+              >
+                <Text style={[styles.tabText, mode === 'live' && styles.tabTextActive]}>
+                  🎥 Live Video
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tabButton, mode === 'photo' && styles.tabButtonActive]}
+                onPress={() => onModeChange('photo')}
+              >
+                <Text style={[styles.tabText, mode === 'photo' && styles.tabTextActive]}>
+                  📷 Photo
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Dynamic Laptop Counter & Status HUD */}
+          <View style={styles.hudCard}>
+            {mode === 'live' ? (
+              <View style={styles.statsRow}>
+                {/* Active in View */}
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>IN VIEW NOW</Text>
+                  <Text style={[styles.statValue, { color: '#00F0FF' }]}>
+                    {trackingStats.currentlyInView}
+                  </Text>
+                </View>
+
+                <View style={styles.statDivider} />
+
+                {/* Total Unique Laptops Counted */}
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>TOTAL UNIQUE LAPTOPS</Text>
+                  <Text style={[styles.statValue, { color: '#39FF14' }]}>
+                    {trackingStats.totalUniqueCounted}
+                  </Text>
+                  <Text style={styles.antiOvercountHint}>Anti-Overcount Active</Text>
+                </View>
+
+                {/* Reset Tracker Button */}
+                <TouchableOpacity style={styles.resetButton} onPress={onResetTracker}>
+                  <Text style={styles.resetButtonText}>🔄 Reset</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>LAPTOPS DETECTED IN PHOTO</Text>
+                  <Text style={[styles.statValue, { color: '#FFD700' }]}>
+                    {photoCount}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </>
+      ) : (
+        /* Hand Gesture Mode Controls */
+        <View style={styles.hudCard}>
           <View style={styles.statsRow}>
-            {/* Active in View */}
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>IN VIEW NOW</Text>
-              <Text style={[styles.statValue, { color: '#00F0FF' }]}>
-                {trackingStats.currentlyInView}
+              <Text style={styles.statLabel}>ACTIVE GESTURE</Text>
+              <Text style={[styles.statValue, { color: '#FF2366', fontSize: 20 }]}>
+                {gestureResult?.gesture && gestureResult.gesture !== 'none'
+                  ? gestureResult.gesture.toUpperCase()
+                  : 'WAITING...'}
               </Text>
             </View>
 
             <View style={styles.statDivider} />
 
-            {/* Total Unique Laptops Counted */}
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>TOTAL UNIQUE LAPTOPS</Text>
-              <Text style={[styles.statValue, { color: '#39FF14' }]}>
-                {trackingStats.totalUniqueCounted}
+              <Text style={styles.statLabel}>NOTIFICATIONS SENT</Text>
+              <Text style={[styles.statValue, { color: '#38BDF8' }]}>
+                {gestureResult?.totalTriggerCount || 0}
               </Text>
-              <Text style={styles.antiOvercountHint}>Anti-Overcount Active</Text>
-            </View>
-
-            {/* Reset Tracker Button */}
-            <TouchableOpacity style={styles.resetButton} onPress={onResetTracker}>
-              <Text style={styles.resetButtonText}>🔄 Reset</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>LAPTOPS DETECTED IN PHOTO</Text>
-              <Text style={[styles.statValue, { color: '#FFD700' }]}>
-                {photoCount}
-              </Text>
+              <Text style={styles.antiOvercountHint}>Offline Push Ready</Text>
             </View>
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
       {/* Metrics & Confidence Controls */}
       <View style={styles.bottomRow}>
@@ -144,22 +205,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#1E293B',
   },
+  domainSwitcherContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#1E293B',
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 12,
+  },
+  domainTab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  domainTabActive: {
+    backgroundColor: '#0284C7',
+  },
+  domainTabGestureActive: {
+    backgroundColor: '#E11D48',
+  },
+  domainTabText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  domainTabTextActive: {
+    color: '#FFFFFF',
+  },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
-  appTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
   subtitle: {
     color: '#94A3B8',
     fontSize: 12,
-    marginTop: 2,
   },
   tabContainer: {
     flexDirection: 'row',
