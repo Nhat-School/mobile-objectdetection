@@ -1,0 +1,24 @@
+{
+  "name": "Vision AI - Laptop & Gesture Tracker",
+  "short_name": "VisionAI",
+  "description": "Real-time hand gesture recognition and laptop tracking powered by Google MediaPipe",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#070A0F",
+  "theme_color": "#070A0F",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://api.iconify.design/fluent-emoji:victory-hand.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://api.iconify.design/fluent-emoji:victory-hand.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

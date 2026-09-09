@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Vision AI — Real-time Laptop & Hand Gesture Tracker</title>
+  <meta name="description" content="100% Free client-side real-time hand gesture recognition and laptop tracking with MediaPipe and TensorFlow.js" />
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#070A0F" />
+  <link rel="stylesheet" href="./index.css" />
+
+  <!-- MediaPipe CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <!-- TensorFlow.js & COCO-SSD for Real Laptop Tracking -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <!-- Top Glass Header -->
+  <header class="header">
+    <div class="brand-row">
+      <span class="brand-icon">⚡</span>
+      <div>
+        <div class="brand-title">Vision AI</div>
+      </div>
+      <span class="brand-badge" id="engineBadge">INITIALIZING...</span>
+    </div>
+
+    <!-- Source Toggle: Live Camera vs Image Mode -->
+    <div class="header-actions">
+      <button class="btn-mode active" id="btnSourceLive" title="Live Camera Feed">📹 Live</button>
+      <button class="btn-mode" id="btnSourceImage" title="Static Image / Photo Mode">📸 Image</button>
+    </div>
+  </header>
+
+  <!-- Telemetry HUD Panel -->
+  <div class="hud-panel">
+    <div class="hud-item">
+      <span class="hud-label">LAPTOPS</span>
+      <span class="hud-value" id="hudLaptopsInView" style="color: var(--neon-cyan);">0</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-item">
+      <span class="hud-label">TOTAL UNIQUE</span>
+      <span class="hud-value" id="hudTotalLaptops" style="color: var(--neon-lime);">0</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-item">
+      <span class="hud-label">GESTURE</span>
+      <span class="hud-value" id="hudGesture" style="color: var(--neon-pink);">None</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-item">
+      <span class="hud-label">PERF / FPS</span>
+      <span class="hud-value" id="hudFps" style="color: var(--neon-gold); font-size: 13px;">-- fps</span>
+    </div>
+  </div>
+
+  <!-- Interactive Gesture Reference Bar -->
+  <div class="test-bar">
+    <span class="test-label">TRY:</span>
+    <button class="chip-btn" data-gesture="finger_heart">🫰 Finger Heart</button>
+    <button class="chip-btn" data-gesture="scissor">✌️ Scissor</button>
+    <button class="chip-btn" data-gesture="thumbs_up">👍 Thumbs Up</button>
+    <button class="chip-btn" data-gesture="thumbs_down">👎 Thumbs Down</button>
+    <button class="chip-btn" data-gesture="palm">👋 Open Palm</button>
+    <button class="chip-btn" data-gesture="fist">✊ Fist</button>
+  </div>
+
+  <!-- Image Upload Bar (Visible in Image Mode) -->
+  <div id="imageControlsBar" style="display: none; background: rgba(18, 24, 38, 0.95); border-bottom: 1px solid var(--border-active); padding: 10px 16px; align-items: center; justify-content: space-between; gap: 10px;">
+    <span style="font-size: 12px; font-weight: 700; color: var(--neon-cyan);">📸 Image Mode:</span>
+    <input type="file" id="imageFileInput" accept="image/*" style="display: none;" />
+    <div style="display: flex; gap: 8px;">
+      <button class="btn-mode active" id="btnTriggerUpload" style="background: rgba(0, 240, 255, 0.2); border-color: var(--neon-cyan); color: #fff;">
+        📁 Upload Photo
+      </button>
+      <button class="btn-mode" id="btnSnapLiveFrame" style="background: rgba(57, 255, 20, 0.15); border-color: var(--neon-lime); color: var(--neon-lime);">
+        📸 Snap Live Camera
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Viewport Container -->
+  <main class="viewport-container" id="viewport">
+    <video id="webcam" playsinline autoplay muted></video>
+    <canvas id="overlayCanvas"></canvas>
+
+    <!-- Hidden image element for static photo processing -->
+    <img id="staticImg" style="display: none; max-width: 100%; max-height: 100%; object-fit: contain;" alt="Upload Preview" />
+
+    <!-- HUD Overlay Indicators -->
+    <div class="status-pill-top">
+      <div class="radar-dot" id="statusRadarDot"></div>
+      <span id="cameraStatusText">LIVE TRACKING</span>
+    </div>
+
+    <div class="active-gesture-pill" id="activeGesturePill">
+      <span id="activeGestureText">🫰 FINGER HEART 95%</span>
+    </div>
+
+    <!-- Hand Detection Diagnostic Pill -->
+    <div id="handDebugPill" style="position: absolute; bottom: 16px; left: 16px; background: rgba(7, 10, 15, 0.85); border: 1px solid #30363D; border-radius: 12px; padding: 4px 10px; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #8B949E; z-index: 10;">
+      Hands: 0 detected
+    </div>
+
+    <!-- Futuristic Reticle -->
+    <div class="reticle">
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+    </div>
+
+    <!-- Center Floating Reaction Bubble -->
+    <div class="reaction-bubble" id="reactionBubble">🫰</div>
+  </main>
+
+  <!-- Bottom Controls Toolbar -->
+  <nav class="toolbar">
+    <button class="tool-btn" id="btnSnapPhoto" title="Snap current camera frame">
+      📸 Snap
+    </button>
+    <button class="tool-btn" id="btnUploadQuick" title="Upload Photo from Device">
+      📁 Upload
+    </button>
+    <button class="tool-btn" id="btnFlipCamera" title="Switch Front/Back Camera">
+      🔄 Flip
+    </button>
+    <button class="tool-btn" id="btnPauseResume" title="Pause or Resume Detection">
+      ⏸️ Pause
+    </button>
+    <button class="tool-btn btn-reset" id="btnResetTracker" title="Reset Laptop Counter">
+      🔁 Reset
+    </button>
+  </nav>
+
+  <!-- Floating Notification Toast -->
+  <div class="notification-toast" id="toast">
+    <span class="toast-emoji" id="toastEmoji">🫰</span>
+    <div>
+      <div class="toast-title" id="toastTitle">Finger Heart Triggered!</div>
+      <div class="toast-sub" id="toastSub">Held stable • Action dispatched</div>
+    </div>
+  </div>
+
+  <!-- App Script -->
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
