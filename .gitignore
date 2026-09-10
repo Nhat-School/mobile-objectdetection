@@ -17,4 +17,6 @@ Thumbs.db
 
 # Model binaries & caches
 *.zip
+*.pt
+*.pth
 runs/

@@ -1,36 +1,22 @@
 # ==============================================================================
-# 🚀 Universal Object & Gesture Detection Framework - Requirements
-# ==============================================================================
-# Installation:
-#   python3 -m venv .venv
-#   source .venv/bin/activate    # On Windows: .venv\Scripts\activate
-#   pip install -r requirements.txt
-#
-# macOS Note (PEP 668): To install the YOLO CLI globally via Homebrew:
-#   brew install pipx && pipx install ultralytics
+# Smart Camera Vision Application Requirements
+# Tested & 100% Compatible on Windows (Python 3.11+)
 # ==============================================================================
 
-# Core Deep Learning & YOLO11 Engine
-ultralytics>=8.3.0
+# Core Computer Vision & Video Processing
+opencv-python>=4.8.0
+
+# 21-Point Hand & Pose Landmark Tracking (Google MediaPipe)
+mediapipe==0.10.21
+
+# Critical Compatibility Dependencies for MediaPipe on Python 3.11+
+# (Prevents C++ ABI symbol conflicts between NumPy 2.x and MediaPipe)
+numpy<2.0.0,>=1.26.0
+protobuf>=4.25.3,<5.0.0
+
+# Real-Time Computer & Laptop Detection Model (YOLO11)
+ultralytics>=8.0.0
+
+# Neural Network Backing for Ultralytics
 torch>=2.0.0
 torchvision>=0.15.0
-
-# Computer Vision, Image & Video Processing
-opencv-python>=4.8.0
-Pillow>=10.0.0
-numpy>=1.24.0
-
-# Model Export & Edge Deployment (ONNX & LiteRT)
-onnx>=1.14.0
-onnxruntime>=1.15.0
-onnxslim>=0.1.31
-
-# Dataset Handling & Remote Repositories
-pyyaml>=6.0
-requests>=2.31.0
-roboflow>=1.1.0
-tqdm>=4.65.0
-
-# Interactive Notebook Environment (Optional for local development)
-jupyter>=1.0.0
-ipywidgets>=8.0.0
